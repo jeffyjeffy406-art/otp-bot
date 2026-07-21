@@ -30,11 +30,11 @@ async def get_otp(msg: types.Message):
         return
 
     try:
-        # Send OTP request to Telnyx
+        # Send OTP request to Telnyx - use Bearer token with just the API key
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 "https://api.telnyx.com/v2/messages",
-                auth=(SMS_API_KEY, ""),
+                headers={"Authorization": f"Bearer {SMS_API_KEY}"},
                 json={
                     "from": MY_NUMBER,
                     "to": phone,
