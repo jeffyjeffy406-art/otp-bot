@@ -44,36 +44,6 @@ async def get_otp(msg: types.Message):
     except Exception as e:
         await msg.answer(f"❌ Error sending OTP: {str(e)}")
 
-app = FastAPI()
-
-@app.post("/sms-webhook")
-async def webhook(request: Request):
-    try:
-        data = await request.json()
-        body = data.get("body", "")
-        from_number = data.get("from", "")
-        
-        # Extract OTP from message
-        otp_match = re.search(r'\b\d{4,6}\b', body)
-        
-        if otp_match:
-            code = otp_match.group()
-            # Send to all connected users
-            for user_id, chat_id in user_chat_ids.items():
-                try:
-                    await bot.send_message(
-                        chat_id=chat_id,
-                        text=f"📩 OTP received from {from_number}:\n\n`{code}`",
-                        parse_mode="Markdown"
-                    )
-                except:
-                    pass
-        
-        return {"status": "ok"}
-    except Exception as e:
-        print(f"Webhook error: {e}")
-        return {"status": "error", "message": str(e)}
-
 # Polling task
 async def polling_task():
     try:
