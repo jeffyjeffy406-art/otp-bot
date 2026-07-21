@@ -34,7 +34,7 @@ async def get_otp(msg: types.Message):
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 "https://api.telnyx.com/v2/messages",
-                headers={"Authorization": f"Bearer {SMS_API_KEY}"},
+                auth=(SMS_API_KEY, ""),
                 json={
                     "from": MY_NUMBER,
                     "to": phone,
@@ -42,8 +42,10 @@ async def get_otp(msg: types.Message):
                 }
             )
             print(f"Telnyx response: {resp.status_code}")
+            print(f"Telnyx body: {resp.text}")
         await msg.answer(f"✅ OTP sent to {phone}. Waiting for reply...")
     except Exception as e:
+        print(f"Error: {e}")
         await msg.answer(f"❌ Error sending OTP: {str(e)}")
 
 polling_task = None
