@@ -17,6 +17,7 @@ user_chat_ids = {}
 @dp.message(Command("start"))
 async def start(msg: types.Message):
     user_chat_ids[msg.from_user.id] = msg.chat.id
+    print(f"User {msg.from_user.id} started bot")
     await msg.answer("🤖 OTP Bot started! Use /get_otp +1234567890 to request an OTP.")
 
 @dp.message(Command("get_otp"))
@@ -45,20 +46,22 @@ async def get_otp(msg: types.Message):
     except Exception as e:
         await msg.answer(f"❌ Error sending OTP: {str(e)}")
 
-# Polling task
-async def polling_task():
-    try:
-        await dp.start_polling(bot)
-    except Exception as e:
-        print(f"Polling error: {e}")
+polling_task = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global polling_task
     # Start polling when app starts
-    task = asyncio.create_task(polling_task())
+    print("Starting bot polling...")
+    polling_task = asyncio.create_task(dp.start_polling(bot))
     yield
     # Stop polling when app stops
-    task.cancel()
+    print("Stopping bot polling...")
+    polling_task.cancel()
+    try:
+        await polling_task
+    except asyncio.CancelledError:
+        pass
 
 app = FastAPI(lifespan=lifespan)
 
@@ -80,6 +83,7 @@ async def webhook(request: Request):
         if otp_match:
             code = otp_match.group()
             print(f"OTP found: {code}")
+            print(f"Stored user chat IDs: {user_chat_ids}")
             # Send to all connected users
             for user_id, chat_id in user_chat_ids.items():
                 try:
